@@ -1,0 +1,5 @@
+if [ -f ~/.bashrc ]; then
+    . ~/.bashrc
+fi
+source /home/docmaf/stack/loadLSST.bash
+scl enable devtoolset-6 bash

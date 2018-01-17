@@ -1,0 +1,64 @@
+Bootstrap: docker
+From: lsstsqre/centos:7-stackbase-devtoolset-6
+
+%labels
+    Maintainer Owen Boberg (oboberg@uw.edu)
+
+%help
+    A singularity container to run MAF
+
+%files
+    .maf_profile /home/.maf_profile
+    startup.sh /home/startup.sh
+
+%post
+    groupadd docmaf && adduser -m -g docmaf -s /bin/bash docmaf
+    mkdir -p /home/docmaf/stack
+    chmod -R a+rwX /home/docmaf/
+    echo 'export HOME=/home/docmaf' >>$SINGULARITY_ENVIRONMENT
+    echo 'export USER=docmaf' >>$SINGULARITY_ENVIRONMENT
+    cd /home/docmaf/stack
+    curl -OL https://raw.githubusercontent.com/lsst/lsst/master/scripts/newinstall.sh
+    bash newinstall.sh -b -c -3
+    scl enable devtoolset-6 bash
+    source /home/docmaf/stack/loadLSST.bash
+    gcc --version
+    eups distrib install lsst_sims -t sims
+    scl enable devtoolset-6 bash
+    source /home/docmaf/stack/loadLSST.bash
+    conda update -y conda
+    conda install -y ipython jupyter basemap tornado jinja2
+    conda update -y pyqt fontconfig sqlalchemy
+    cd ..
+    python -c 'import matplotlib.pyplot'
+    conda clean -ay
+    rm -rfv /home/docmaf/stack/Linux64/miniconda2/*/pkgs
+    scl enable devtoolset-6 bash
+    source /home/docmaf/stack/loadLSST.bash
+    dbus-uuidgen > /etc/machine-id
+
+    cd /home/docmaf
+    mkdir /home/docmaf/repos
+    cd /home/docmaf/repos
+    git clone https://github.com/lsst/sims_maf.git
+    git clone https://github.com/lsst/sims_data.git
+    cd /home/docmaf
+    scl enable devtoolset-6 bash
+    source /home/docmaf/stack/loadLSST.bash
+    eups declare sims_maf git -r ./repos/sims_maf -c
+    eups declare sims_data git -r ./repos/sims_data -c
+    cd /home/docmaf/repos/sims_maf
+    git checkout master
+    setup sims_maf git
+    cd /home/docmaf/repos/sims_data
+    git checkout master
+    cd /home/docmaf/repos/sims_maf
+    scl enable devtoolset-6 bash
+    source /home/docmaf/stack/loadLSST.bash
+    scons
+    cd /home/docmaf
+    mv /home/.maf_profile .
+    mv /home/startup.sh .
+
+%runscript
+    /bin/bash /home/docmaf/startup.sh
